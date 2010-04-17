@@ -1,7 +1,7 @@
 Summary:	A jungle of Erlang code: XMPP library
 Name:		erlang-exmpp
 Version:	0.9.2
-Release:	1
+Release:	2
 License:	EPL
 Group:		Development/Languages
 Source0:	http://download.process-one.net/exmpp/exmpp-%{version}.tar.gz
