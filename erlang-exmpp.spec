@@ -11,6 +11,7 @@ BuildRequires:	erlang
 BuildRequires:	expat-devel
 BuildRequires:	libxml2-devel
 BuildRequires:	openssl-devel
+BuildRequires:	pkgconfig
 BuildRequires:	zlib-devel
 Requires:	erlang
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
