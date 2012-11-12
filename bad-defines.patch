@@ -1,0 +1,13 @@
+--- exmpp-0.9.2/include/exmpp_nss.hrl~	2009-11-11 11:20:43.000000000 +0100
++++ exmpp-0.9.2/include/exmpp_nss.hrl	2012-11-13 00:02:42.285231816 +0100
+@@ -177,8 +177,8 @@
+   "http://jabber.org/protocol/pubsub#publish-options").
+ 
+ % Defined by XEP-0065: SOCKS5 Bytestreams.
+--define(NS_BYTESTREAMS,              'http://jabber.org/protocol/bytestreams'.
+--define(NS_BYTESTREAMS_s,            "http://jabber.org/protocol/bytestreams".
++-define(NS_BYTESTREAMS,              'http://jabber.org/protocol/bytestreams').
++-define(NS_BYTESTREAMS_s,            "http://jabber.org/protocol/bytestreams").
+ 
+ % Defined by XEP-0066: Out of Band Data.
+ -define(NS_OOBD_IQ,                  'jabber:iq:oob').

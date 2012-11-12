@@ -1,11 +1,12 @@
 Summary:	A jungle of Erlang code: XMPP library
 Name:		erlang-exmpp
 Version:	0.9.2
-Release:	3
+Release:	4
 License:	EPL
 Group:		Development/Languages
 Source0:	http://download.process-one.net/exmpp/exmpp-%{version}.tar.gz
 # Source0-md5:	765778958bc5dd7eb0e91815482cecc0
+Patch0:		bad-defines.patch
 URL:		https://support.process-one.net/doc/display/EXMPP/exmpp+home
 BuildRequires:	erlang
 BuildRequires:	expat-devel
@@ -22,6 +23,7 @@ Protocol (XMPP).
 
 %prep
 %setup -q -n exmpp-%{version}
+%patch0 -p1
 
 %build
 %configure \
