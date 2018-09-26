@@ -1,0 +1,331 @@
+--- exmpp-0.9.9/c_src/exmpp_xml_expat.c~	2011-12-23 12:38:17.000000000 +0100
++++ exmpp-0.9.9/c_src/exmpp_xml_expat.c	2018-09-26 06:41:49.364959005 +0200
+@@ -334,13 +334,13 @@
+     if (uri == NULL) 
+         return;
+ 
+-	struct exmpp_xml_data *edd;
++    struct exmpp_xml_data *edd;
+ 
+-	edd = (struct exmpp_xml_data *)user_data;
++    edd = (struct exmpp_xml_data *)user_data;
+ 
+-	/* Build the declared_nss list. This list will be reset
+-	 * in expat_cb_start_element(). */
+-	make_declared_ns_in_buf(&edd->ctx, edd->declared_nss,
++    /* Build the declared_nss list. This list will be reset
++     * in expat_cb_start_element(). */
++    make_declared_ns_in_buf(&edd->ctx, edd->declared_nss,
+ 	    uri, strlen(uri),
+ 	    prefix, prefix != NULL ? strlen(prefix) : 0);
+ }
+--- exmpp-0.9.9/c_src/exmpp_tls_openssl.c.org	2011-12-23 12:38:17.000000000 +0100
++++ exmpp-0.9.9/c_src/exmpp_tls_openssl.c	2018-09-26 06:50:33.433677127 +0200
+@@ -863,7 +863,11 @@ verify_callback(int preverify_ok, X509_S
+ 			if (ASN1_STRING_type(gen->d.ia5) != V_ASN1_IA5STRING)
+ 				continue;
+ 
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ 			dnsname = (char *)ASN1_STRING_data(gen->d.ia5);
++#else
++			dnsname = (char *)ASN1_STRING_get0_data(gen->d.ia5);
++#endif
+ 
+ 			/* ASN1_IA5STRING may contain NUL character; check
+ 			 * it. */
+@@ -934,9 +938,9 @@ DRIVER_INIT(DRIVER_NAME)
+ 	// Initialize ephemeral Diffie-Hellman parameters.
+ 	dh1024 = DH_new();
+ 	if (dh1024 != NULL) {
+-		dh1024->p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL);
+-		dh1024->g = BN_bin2bn(dh1024_g, sizeof(dh1024_g), NULL);
+-		if (dh1024->p == NULL || dh1024->g == NULL) {
++		BIGNUM * const dh_p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL);
++		BIGNUM * const dh_g = BN_bin2bn(dh1024_g, sizeof(dh1024_g), NULL);
++		if (dh_p == NULL || dh_g == NULL || !DH_set0_pqg(dh1024, dh_p, NULL, dh_g)) {
+ 			DH_free(dh1024);
+ 			dh1024 = NULL;
+ 		}
+--- exmpp-0.9.9/src/core/exmpp_caps.erl.org	2011-12-23 12:38:17.000000000 +0100
++++ exmpp-0.9.9/src/core/exmpp_caps.erl	2018-09-26 07:06:12.324840822 +0200
+@@ -52,7 +52,7 @@
+ %%     Hash = hash()
+ %% @doc Generate a hash from a Caps record.
+ 
+--spec(make/1 :: (ecaps() | identity() | [identity()]) -> hash()).
++-spec make(ecaps() | identity() | [identity()]) -> hash().
+ 
+ make(#identity{} = Identity) ->
+     make(Identity, []);
+@@ -77,7 +77,7 @@ make(_) ->
+ %% @doc Generate a hash from an identity record or from a list of records
+ %%      and a list of namespaces .
+ 
+--spec(make/2 :: (identity() | [identity()], [ns()]) -> hash()).
++-spec make(identity() | [identity()], [ns()]) -> hash().
+ 
+ make(_, Features) when not is_list(Features) ->
+     throw({exmpp_caps, make, 'Features : [ns()]'});
+@@ -103,7 +103,7 @@ make(Identities, Features) ->
+ %% @doc Generate a hash from an identity record or from a list of identity records,
+ %%      a list of namespaces, and a form or a list of forms .
+ 
+--spec(make/3 :: (identity() | [identity()], [ns()], form() | [form()]) -> hash()).
++-spec make(identity() | [identity()], [ns()], form() | [form()]) -> hash().
+ 
+ make(_, Features, _) when not is_list(Features) ->
+     throw({exmpp_caps, make, 'Features : [ns()]'});
+@@ -135,7 +135,7 @@ make(Identities, Features, Forms) ->
+ %%     Forms  = form()  | [form()]
+ %%     String = string()
+ 
+--spec(forms/1 :: (form()  | [form()]) -> string()).
++-spec forms(form()  | [form()]) -> string().
+ 
+ forms(#form{type = Type, fields = Fields}) ->
+     Type ++ "<" ++ fields(Fields);
+@@ -151,7 +151,7 @@ forms(_) ->
+ %%     Fields = field() | [field()]
+ %%     String = string()
+ 
+--spec(fields/1 :: (field()  | [field()]) -> string()).
++-spec fields(field()  | [field()]) -> string().
+ 
+ fields(#field{var = Var, values = Values}) ->
+     Var ++ "<" ++ values(Values);
+@@ -167,7 +167,7 @@ fields(_) ->
+ %%     Values = [value()]
+ %%     String = string()
+ 
+--spec(values/1 :: ([value()]) -> string()).
++-spec values([value()]) -> string().
+ 
+ values(Values) when is_list(Values) ->
+     lists:foldl(
+@@ -187,7 +187,7 @@ values(_) ->
+ %%     Features = [ns()]
+ %%     String   = string()
+ 
+--spec(features/1 :: ([ns()]) -> string()).
++-spec features([ns()]) -> string().
+ 
+ features(Features) when is_list(Features) ->
+     values(Features);
+@@ -199,7 +199,7 @@ features(_) ->
+ %%     Identities = identity() | [identity()]
+ %%     String     = string()
+ 
+--spec(identities/1 :: (identity() | [identity()]) -> string()).
++-spec identities(identity() | [identity()]) -> string().
+ 
+ identities(#identity{category = Category, type = Type, lang = Lang, name = Name}) ->
+     Category ++ "/" ++ Type ++ "/" ++ Lang ++ "/" ++ Name ++ "<";
+@@ -215,7 +215,7 @@ identities(_) ->
+ %%     String = string()
+ %%     Hash   = hash()
+ 
+--spec(hash_caps/1 :: (string()) -> hash()).
++-spec hash_caps(string()) -> hash().
+ 
+ hash_caps(String) when is_list(String)->
+     base64:encode(crypto:sha(unicode:characters_to_list(String)));
+--- exmpp-0.9.9/src/core/exmpp_internals.erl.org	2011-12-23 12:38:17.000000000 +0100
++++ exmpp-0.9.9/src/core/exmpp_internals.erl	2018-09-26 07:10:02.431676797 +0200
+@@ -49,7 +49,7 @@
+ %%     Dirs = [string()]
+ %% @doc Return a list of directories to search port drivers in.
+ 
+--spec(driver_dirs/0 :: () -> [string()]).
++-spec driver_dirs() -> [string()].
+ 
+ driver_dirs() ->
+     Mod_Path = case code:is_loaded(?MODULE) of
+@@ -85,7 +85,7 @@ driver_dirs() ->
+ %% @throws {port_driver, load, Reason, Driver_Name}
+ %% @doc Load the port driver `Driver_Name'.
+ 
+--spec(load_driver/1 :: (atom()) -> ok).
++-spec load_driver(atom()) -> ok.
+ 
+ load_driver(Driver_Name) ->
+     Dirs = driver_dirs(),
+@@ -99,7 +99,7 @@ load_driver(Driver_Name) ->
+ %%
+ %% The driver is search in `Dirs'.
+ 
+--spec(load_driver/2 :: (atom(), [string()]) -> ok).
++-spec load_driver(atom(), [string()]) -> ok.
+ 
+ load_driver(Driver_Name, Dirs) ->
+     load_driver1(Driver_Name, Dirs, undefined).
+@@ -121,7 +121,7 @@ load_driver1(Driver_Name, [], Reason) ->
+ %%     Driver_Name = atom()
+ %% @doc Unload the port driver `Driver_Name'.
+ 
+--spec(unload_driver/1 :: (atom()) -> ok).
++-spec unload_driver(atom()) -> ok.
+ 
+ unload_driver(Driver_Name) ->
+     erl_ddll:unload_driver(Driver_Name),
+@@ -133,7 +133,7 @@ unload_driver(Driver_Name) ->
+ %% @throws {port_driver, open, {posix, Posix_Code}, Driver_Name}
+ %% @doc Spawn a new port driver instance.
+ 
+--spec(open_port/1 :: (atom()) -> port()).
++-spec open_port(atom()) -> port().
+ 
+ open_port(Driver_Name) ->
+     try
+@@ -149,7 +149,7 @@ open_port(Driver_Name) ->
+ %%
+ %% `Port' was obtained with {@link open_port/1}.
+ 
+--spec(close_port/1 :: (port()) -> true).
++-spec close_port(port()) -> true.
+ 
+ close_port(Port) ->
+     erlang:port_close(Port).
+@@ -168,8 +168,8 @@ close_port(Port) ->
+ %% @doc Wrapper to abstract the `recv' function of multiple communication
+ %% modules.
+ 
+--spec(gen_recv/2 ::
+-      ({atom(), any()}, integer() | infinity) -> {ok, binary()} | {error, any()}).
++-spec gen_recv
++      ({atom(), any()}, integer() | infinity) -> {ok, binary()} | {error, any()}.
+ 
+ gen_recv({gen_tcp, Socket}, Timeout) ->
+     gen_tcp:recv(Socket, 0, Timeout);
+@@ -185,7 +185,7 @@ gen_recv({Mod, Socket}, Timeout) ->
+ %% @doc Wrapper to abstract the `send' function of multiple communication
+ %% modules.
+ 
+--spec(gen_send/2 :: ({atom(), any()}, binary()) -> ok | {error, any()}).
++-spec gen_send({atom(), any()}, binary()) -> ok | {error, any()}.
+ 
+ gen_send({Mod, Socket}, Packet) ->
+     Mod:send(Socket, Packet).
+@@ -199,7 +199,7 @@ gen_send({Mod, Socket}, Packet) ->
+ %% @doc Wrapper to abstract the `getopts' function of multiple communication
+ %% modules.
+ 
+--spec(gen_getopts/2 :: ({atom(), any()}, list()) -> list() | {error, any()}).
++-spec gen_getopts({atom(), any()}, list()) -> list() | {error, any()}.
+ 
+ gen_getopts({gen_tcp, Socket}, Options) ->
+     inet:getopts(Socket, Options);
+@@ -214,7 +214,7 @@ gen_getopts({Mod, Socket}, Options) ->
+ %% @doc Wrapper to abstract the `setopts' function of multiple communication
+ %% modules.
+ 
+--spec(gen_setopts/2 :: ({atom(), any()}, list()) -> ok | {error, any()}).
++-spec gen_setopts({atom(), any()}, list()) -> ok | {error, any()}.
+ 
+ gen_setopts({gen_tcp, Socket}, Options) ->
+     inet:setopts(Socket, Options);
+@@ -230,7 +230,7 @@ gen_setopts({Mod, Socket}, Options) ->
+ %% @doc Wrapper to abstract the `peername' function of multiple communication
+ %% modules.
+ 
+--spec(gen_peername/1 :: ({atom(), any()}) -> {ok, any()} | {error, any()}).
++-spec gen_peername({atom(), any()}) -> {ok, any()} | {error, any()}.
+ 
+ gen_peername({gen_tcp, Socket}) ->
+     inet:peername(Socket);
+@@ -246,7 +246,7 @@ gen_peername({Mod, Socket}) ->
+ %% @doc Wrapper to abstract the `sockname' function of multiple communication
+ %% modules.
+ 
+--spec(gen_sockname/1 :: ({atom(), any()}) -> {ok, any()} | {error, any()}).
++-spec gen_sockname({atom(), any()}) -> {ok, any()} | {error, any()}.
+ 
+ gen_sockname({gen_tcp, Socket}) ->
+     inet:sockname(Socket);
+@@ -262,8 +262,8 @@ gen_sockname({Mod, Socket}) ->
+ %% @doc Wrapper to abstract the `controlling_process' function of
+ %% multiple communication modules.
+ 
+--spec(gen_controlling_process/2 ::
+-      ({atom(), any()}, pid()) -> ok | {error, any()}).
++-spec gen_controlling_process
++      ({atom(), any()}, pid()) -> ok | {error, any()}.
+ 
+ gen_controlling_process({Mod, Socket}, Pid) ->
+     Mod:controlling_process(Socket, Pid).
+@@ -275,7 +275,7 @@ gen_controlling_process({Mod, Socket}, P
+ %% @doc Wrapper to abstract the `close' function of multiple communication
+ %% modules.
+ 
+--spec(gen_close/1 :: ({atom(), any()}) -> ok | {error, any()}).
++-spec gen_close({atom(), any()}) -> ok | {error, any()}.
+ 
+ gen_close({Mod, Socket}) ->
+     Mod:close(Socket).
+--- exmpp-0.9.9/src/core/exmpp_utils.erl.org	2011-12-23 12:38:17.000000000 +0100
++++ exmpp-0.9.9/src/core/exmpp_utils.erl	2018-09-26 07:12:32.866143363 +0200
+@@ -46,8 +46,8 @@
+ %% {@link erlang:integer_to_list/1} is used. For a binary, {@link
+ %% erlang:binary_to_list/1} is used. A string is returned as is.
+ 
+--spec(any_to_list/1 ::
+-      (binary() | string() | integer() | atom()) -> string()).
++-spec any_to_list
++      (binary() | string() | integer() | atom()) -> string().
+ 
+ any_to_list(Atom) when is_atom(Atom) ->
+     atom_to_list(Atom);
+@@ -68,8 +68,8 @@ any_to_list(Binary) when is_binary(Binar
+ %% {@link erlang:integer_to_list/1} is used. For a string, {@link
+ %% erlang:list_to_binary/1} is used. A binary is returned as is.
+ 
+--spec(any_to_binary/1 ::
+-      (binary() | string() | integer() | atom()) -> binary()).
++-spec any_to_binary
++      (binary() | string() | integer() | atom()) -> binary().
+ 
+ any_to_binary(Atom) when is_atom(Atom) ->
+     any_to_binary(atom_to_list(Atom));
+@@ -88,10 +88,9 @@ any_to_binary(Binary) when is_binary(Bin
+ %%
+ %% @see strip/3.
+ 
+--spec(strip/1 ::
++-spec strip
+       (binary()) -> binary();
+-      (string()) -> string()
+-		       ).
++      (string()) -> string().
+ 
+ strip(Stream) ->
+     strip(Stream, both).
+@@ -109,10 +108,9 @@ strip(Stream) ->
+ %%
+ %% @see strip/3.
+ 
+--spec(strip/2 ::
++-spec strip
+       (binary(), left | right | both) -> binary();
+-      (string(), left | right | both) -> string()
+-					    ).
++      (string(), left | right | both) -> string().
+ 
+ strip(Stream, left) ->
+     strip_left(Stream);
+@@ -160,7 +158,7 @@ strip_right([]) ->
+ %%
+ %% @see random_id/1.
+ 
+--spec(random_id/0 :: () -> string()).
++-spec random_id() -> string().
+ 
+ random_id() ->
+     random_id("exmpp").
+@@ -175,7 +173,7 @@ random_id() ->
+ %%
+ %% The ID is not guaranted to be unique.
+ 
+--spec(random_id/1 :: (string() | undefined) -> string()).
++-spec random_id(string() | undefined) -> string().
+ 
+ random_id(undefined) ->
+     integer_to_list(random:uniform(65536 * 65536));
